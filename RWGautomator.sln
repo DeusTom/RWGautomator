@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32526.322
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RWGautomator", "RWGautomator\RWGautomator.csproj", "{D46CDD21-4E57-4EAD-B303-5D02D06C375E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D46CDD21-4E57-4EAD-B303-5D02D06C375E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D46CDD21-4E57-4EAD-B303-5D02D06C375E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D46CDD21-4E57-4EAD-B303-5D02D06C375E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D46CDD21-4E57-4EAD-B303-5D02D06C375E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A8ADBD03-AC67-4E30-986A-252C90EE01AB}
+	EndGlobalSection
+EndGlobal
