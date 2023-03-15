@@ -1,16 +1,20 @@
-﻿using System;
+﻿using ExcelFunctionLibrary;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Globalization;
+using ExcelFunctionLibrary.Models.RWGautomator;
+using ExcelFunctionLibrary.Models;
 
 namespace KRGautomator
 {
     internal class GenerateRoots
     {
-        public static List<ExcelFunctionLibrary.StringAndInt> ExpandSentencesExact(List<ExcelFunctionLibrary.StringAndInt> partialSentences, List<ExcelFunctionLibrary.StringAndInt> uniqueWords)
+        public static List<RWGWritableData> ExpandSentencesExact(List<RWGWritableData> partialSentences, List<RWGWritableData> uniqueWords)
         {
-            List<ExcelFunctionLibrary.StringAndInt> newSentences = new();
+            List<RWGWritableData> newSentences = new();
             foreach (var sentence in partialSentences)
             {
                 foreach (var word in uniqueWords)
@@ -27,15 +31,15 @@ namespace KRGautomator
                     newSentence += " " + word.keyword;
 
                     newSentence.Trim();
-                    newSentences.Add(new ExcelFunctionLibrary.StringAndInt() { keyword=newSentence, number=0 });
+                    newSentences.Add(new RWGWritableData() { keyword = newSentence, frequency = 0, searchVolume = 0 });
                 }
             }
 
             return newSentences;
         }
-        public static List<ExcelFunctionLibrary.StringAndInt> ExpandSentencesBroad(List<ExcelFunctionLibrary.StringAndInt> partialSentences, List<ExcelFunctionLibrary.StringAndInt> uniqueWords)
+        public static List<RWGWritableData> ExpandSentencesBroad(List<RWGWritableData> partialSentences, List<RWGWritableData> uniqueWords)
         {
-            List<ExcelFunctionLibrary.StringAndInt> newSentences = new();
+            List<RWGWritableData> newSentences = new();
             for(int i = 0; i < partialSentences.Count; i++)
             {
                 for(int j = i+1; j < uniqueWords.Count; j++)
@@ -52,24 +56,25 @@ namespace KRGautomator
                     newSentence += " " + uniqueWords[j].keyword;
 
                     newSentence.Trim();
-                    newSentences.Add(new ExcelFunctionLibrary.StringAndInt() { keyword=newSentence, number = 0});
+                    newSentences.Add(new RWGWritableData() { keyword=newSentence, frequency = 0, searchVolume = 0 });
                 }
             }
 
             return newSentences;
         }
 
-        public static List<ExcelFunctionLibrary.StringAndInt> GenerateWordCountExact(List<ExcelFunctionLibrary.StringAndInt> uniqueSentences, List<string> primaryKeywords)
+        public static List<RWGWritableData> GenerateWordCountExact(List<RWGWritableData> uniqueSentences, List<StackedColumns> primaryKeywords)
         {
-            foreach (ExcelFunctionLibrary.StringAndInt root in uniqueSentences)
+            foreach (RWGWritableData root in uniqueSentences)
             {
-                root.number = 0;
-                foreach (string keyword in primaryKeywords)
+                root.frequency = 0;
+                foreach (StackedColumns keyword in primaryKeywords)
                 {
 
-                    if (keyword.Contains(root.keyword))
+                    if (keyword.stackedCellValues[0].Contains(root.keyword))
                     {
-                        root.number++;
+                        root.frequency++;
+                        root.searchVolume += int.Parse(keyword.stackedCellValues[1], NumberStyles.AllowThousands);
                     }
                 }
             }
@@ -77,17 +82,17 @@ namespace KRGautomator
             return uniqueSentences;
         }
 
-        public static List<ExcelFunctionLibrary.StringAndInt> GenerateWordCountBroad(List<ExcelFunctionLibrary.StringAndInt> uniqueSentences, List<string> primaryKeywords)
+        public static List<RWGWritableData> GenerateWordCountBroad(List<RWGWritableData> uniqueSentences, List<StackedColumns> primaryKeywords)
         {
-            foreach (ExcelFunctionLibrary.StringAndInt root in uniqueSentences)
+            foreach (RWGWritableData root in uniqueSentences)
             {
-                root.number = 0;
-                foreach (string keyword in primaryKeywords)
+                root.frequency = 0;
+                foreach (StackedColumns keyword in primaryKeywords)
                 {
                     int currentWordCount = 0;
                     foreach (string word in root.keyword.Split(" "))
                     {
-                        foreach (string kword in keyword.Split(" "))
+                        foreach (string kword in keyword.stackedCellValues[0].Split(" "))
                         {
                             if (word == kword)
                             {
@@ -98,7 +103,8 @@ namespace KRGautomator
                     }
                     if (currentWordCount >= root.keyword.Split(" ").Length)
                     {
-                        root.number++;
+                        root.frequency++;
+                        root.searchVolume += int.Parse(keyword.stackedCellValues[1], NumberStyles.AllowThousands);
                     }
                 }
             }

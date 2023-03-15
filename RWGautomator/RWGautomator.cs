@@ -1,6 +1,11 @@
 using Excel = Microsoft.Office.Interop.Excel;
 using System.Runtime.InteropServices;
 using ExcelFunctionLibrary;
+using ExcelFunctionLibrary.Models;
+using TRVautomator;
+using System.Globalization;
+using ExcelFunctionLibrary.Models.RWGautomator;
+using Microsoft.Office.Interop.Excel;
 
 namespace KRGautomator
 {
@@ -10,16 +15,37 @@ namespace KRGautomator
         Excel.Application? xlApp = null;
         Excel.Workbook? xlWorkbook = null;
         Excel.Worksheet? xlWorksheet = null;
+        private bool IsTraining = false;
+        private bool IsAdmin = false;
         public RWGautomator()
         {
-            InitializeComponent();
+            LoginForm form = new();
+            form.ShowDialog();
+            if (form.showAutomator)
+            {
+                InitializeComponent();
+
+                IsTraining = form.IsTraining;
+                IsAdmin = form.IsAdmin;
+                if (IsTraining)
+                {
+                    this.Text += " (Training)";
+                }
+            }
+            else
+            {
+                Environment.Exit(0);
+            }
+
         }
 
         private void generateRoots_Click(object sender, EventArgs e)
         {
             try
             {
+
                 string fileTARGET = System.IO.Path.GetFullPath(openFileDialog.FileName);
+
                 if (fileTARGET == null)
                 {
                     MessageBox.Show("Please select a valid document.");
@@ -28,54 +54,57 @@ namespace KRGautomator
                 {
 
                     generateRoots.BackColor = Color.Red;
+                    xlWorksheet = xlWorkbook.Sheets["Root Word Generator"];
 
-                    xlWorksheet = xlWorkbook.Sheets["ROOT WORD GENERATOR"];
                     List<DefinedColumn> readableColumns = new();
                     readableColumns.Add(new DefinedColumn() { column = (int)ExcelColumns.B, columnStartsFrom = 3 });
+                    readableColumns.Add(new DefinedColumn() { column = (int)ExcelColumns.C, columnStartsFrom = 3 });
                     ReadBasicColumnData readExcel = new(xlWorksheet, readableColumns);
                     WriteBasicColumnData writeExcel = new(xlWorksheet);
-
+                    
                     generateRoots.Text = "Generating unique roots...";
-                    List<string> primaryKeywords = readExcel.ReadColumns();
-                    List<ExcelFunctionLibrary.StringAndInt> uniqueWords = new();
+                    List<StackedColumns> primaryKeywords = readExcel.ReadStackedColumns();
+                    List<RWGWritableData> uniqueWords = new();
                     int highestWordCount = 0;
-                    foreach (string word in primaryKeywords)
+                    foreach (StackedColumns sentence in primaryKeywords)
                     {
-                        highestWordCount = word.Split(" ").Length > highestWordCount ? word.Split(" ").Length : highestWordCount;
+                        highestWordCount = sentence.stackedCellValues[0].Split(" ").Length > highestWordCount ? sentence.stackedCellValues[0].Split(" ").Length : highestWordCount;
 
-                        foreach (string splittedWord in word.Split(" "))
+                        int searchVolume = int.Parse(sentence.stackedCellValues[1], NumberStyles.AllowThousands);
+                        foreach (var word in sentence.stackedCellValues[0].Split(" ").Select((value, i) => new {i, value}))
                         {
                             try
                             {
-                                List<ExcelFunctionLibrary.StringAndInt> isUnique = uniqueWords.Where(s1 => s1.keyword.Contains(splittedWord)).ToList();
+                                List<RWGWritableData> isUnique = uniqueWords.Where(s1 => s1.keyword.Contains(word.value)).ToList();
                                 if (isUnique.Count == 0)
                                 {
-                                    uniqueWords.Add(new ExcelFunctionLibrary.StringAndInt() { keyword = splittedWord, number = 1 });
+                                    uniqueWords.Add(new RWGWritableData() { keyword = word.value, frequency = 1, searchVolume = searchVolume });
                                 }
                                 else
                                 {
-                                    foreach (ExcelFunctionLibrary.StringAndInt nonUnique in isUnique)
+                                    foreach (RWGWritableData nonUnique in isUnique)
                                     {
-                                        if (nonUnique.keyword == splittedWord)
+                                        if (nonUnique.keyword == word.value)
                                         {
-                                            nonUnique.number++;
+                                            nonUnique.frequency++;
+                                            nonUnique.searchVolume += searchVolume;
                                             break;
                                         }
                                     }
                                 }
                             }
-                            catch { uniqueWords.Add(new ExcelFunctionLibrary.StringAndInt() { keyword = splittedWord, number = 1 }); }
+                            catch { uniqueWords.Add(new RWGWritableData() { keyword = word.value, frequency = 1, searchVolume = searchVolume }); }
 
                         }
                     }
 
 
                     generateRoots.Text = "Generating unique broad roots of 2...";
-                    List<ExcelFunctionLibrary.StringAndInt> unique2WordsBroad = GenerateRoots.ExpandSentencesBroad(uniqueWords, uniqueWords);
+                    List<RWGWritableData> unique2WordsBroad = GenerateRoots.ExpandSentencesBroad(uniqueWords, uniqueWords);
                     unique2WordsBroad = GenerateRoots.GenerateWordCountBroad(unique2WordsBroad, primaryKeywords);
                     
                     generateRoots.Text = "Generating unique exact roots of 2...";
-                    List<ExcelFunctionLibrary.StringAndInt> unique2WordsExact = GenerateRoots.ExpandSentencesExact(uniqueWords, uniqueWords);
+                    List<RWGWritableData> unique2WordsExact = GenerateRoots.ExpandSentencesExact(uniqueWords, uniqueWords);
                     unique2WordsExact = GenerateRoots.GenerateWordCountExact(unique2WordsExact, primaryKeywords);
 
 
@@ -84,79 +113,84 @@ namespace KRGautomator
                     if (highestWordCount > 2)
                     {
                         generateRoots.Text = "Generating unique broad roots of 3...";
-                        List<ExcelFunctionLibrary.StringAndInt> unique3WordsBroad = GenerateRoots.ExpandSentencesBroad(unique2WordsBroad, uniqueWords);
+                        List<RWGWritableData> unique3WordsBroad = GenerateRoots.ExpandSentencesBroad(unique2WordsBroad, uniqueWords);
                         unique3WordsBroad = GenerateRoots.GenerateWordCountBroad(unique3WordsBroad, primaryKeywords);
 
                         generateRoots.Text = "Generating unique exact roots of 3...";
-                        List<ExcelFunctionLibrary.StringAndInt> unique3WordsExact = GenerateRoots.ExpandSentencesExact(unique2WordsExact, uniqueWords);
+                        List<RWGWritableData> unique3WordsExact = GenerateRoots.ExpandSentencesExact(unique2WordsExact, uniqueWords);
                         unique3WordsExact = GenerateRoots.GenerateWordCountExact(unique3WordsExact, primaryKeywords);
 
 
-                        unique3WordsBroad = unique3WordsBroad.Where(s1 => s1.number > 0).ToList();
-                        unique3WordsBroad.Sort((s1, s2) => s2.number.CompareTo(s1.number));
-                        unique3WordsExact = unique3WordsExact.Where(s1 => s1.number > 0).ToList();
-                        unique3WordsExact.Sort((s1, s2) => s2.number.CompareTo(s1.number));
+                        unique3WordsBroad = unique3WordsBroad.Where(s1 => s1.frequency > 0).ToList();
+                        unique3WordsBroad.Sort((s1, s2) => s2.frequency.CompareTo(s1.frequency));
+                        unique3WordsExact = unique3WordsExact.Where(s1 => s1.frequency > 0).ToList();
+                        unique3WordsExact.Sort((s1, s2) => s2.frequency.CompareTo(s1.frequency));
 
-                        writeExcel.WriteStringAndInt((int)ExcelColumns.N, (int)ExcelColumns.M, unique3WordsBroad, 3);
-                        writeExcel.WriteStringAndInt((int)ExcelColumns.Q, (int)ExcelColumns.P, unique3WordsExact, 3);
+                        writeExcel.WriteRWGCustomData((int)ExcelColumns.Q, (int)ExcelColumns.R, (int)ExcelColumns.S, unique3WordsBroad, 3);
+                        writeExcel.WriteRWGCustomData((int)ExcelColumns.U, (int)ExcelColumns.V, (int)ExcelColumns.W, unique3WordsExact, 3);
+
 
                         if (highestWordCount > 3)
                         {
                             generateRoots.Text = "Generating unique broad roots of 4...";
-                            List<ExcelFunctionLibrary.StringAndInt> unique4WordsBroad = GenerateRoots.ExpandSentencesBroad(unique3WordsBroad, uniqueWords);
+                            List<RWGWritableData> unique4WordsBroad = GenerateRoots.ExpandSentencesBroad(unique3WordsBroad, uniqueWords);
                             unique4WordsBroad = GenerateRoots.GenerateWordCountBroad(unique4WordsBroad, primaryKeywords);
 
                             generateRoots.Text = "Generating unique exact roots of 4...";
-                            List<ExcelFunctionLibrary.StringAndInt> unique4WordsExact = GenerateRoots.ExpandSentencesExact(unique3WordsExact, uniqueWords);
+                            List<RWGWritableData> unique4WordsExact = GenerateRoots.ExpandSentencesExact(unique3WordsExact, uniqueWords);
                             unique4WordsExact = GenerateRoots.GenerateWordCountExact(unique4WordsExact, primaryKeywords);
 
 
-                            unique4WordsBroad = unique4WordsBroad.Where(s1 => s1.number > 0).ToList();
-                            unique4WordsBroad.Sort((s1, s2) => s2.number.CompareTo(s1.number));
-                            unique4WordsExact = unique4WordsExact.Where(s1 => s1.number > 0).ToList();
-                            unique4WordsExact.Sort((s1, s2) => s2.number.CompareTo(s1.number));    
+                            unique4WordsBroad = unique4WordsBroad.Where(s1 => s1.frequency > 0).ToList();
+                            unique4WordsBroad.Sort((s1, s2) => s2.frequency.CompareTo(s1.frequency));
+                            unique4WordsExact = unique4WordsExact.Where(s1 => s1.frequency > 0).ToList();
+                            unique4WordsExact.Sort((s1, s2) => s2.frequency.CompareTo(s1.frequency));
 
-                            writeExcel.WriteStringAndInt((int)ExcelColumns.T, (int)ExcelColumns.S, unique4WordsBroad, 3);
-                            writeExcel.WriteStringAndInt((int)ExcelColumns.W, (int)ExcelColumns.V, unique4WordsExact, 3);
+                            writeExcel.WriteRWGCustomData((int)ExcelColumns.Y, (int)ExcelColumns.Z, (int)ExcelColumns.AA, unique4WordsBroad, 3);
+                            writeExcel.WriteRWGCustomData((int)ExcelColumns.AC, (int)ExcelColumns.AD, (int)ExcelColumns.AE, unique4WordsExact, 3);
+
 
                             if (highestWordCount > 4)
                             {
                                 generateRoots.Text = "Generating unique broad roots of 5...";
-                                List<ExcelFunctionLibrary.StringAndInt> unique5WordsBroad = GenerateRoots.ExpandSentencesBroad(unique4WordsBroad, uniqueWords);
+                                List<RWGWritableData> unique5WordsBroad = GenerateRoots.ExpandSentencesBroad(unique4WordsBroad, uniqueWords);
                                 unique5WordsBroad = GenerateRoots.GenerateWordCountBroad(unique5WordsBroad, primaryKeywords);
 
                                 generateRoots.Text = "Generating unique exact roots of 5...";
-                                List<ExcelFunctionLibrary.StringAndInt> unique5WordsExact = GenerateRoots.ExpandSentencesExact(unique4WordsExact, uniqueWords);
+                                List<RWGWritableData> unique5WordsExact = GenerateRoots.ExpandSentencesExact(unique4WordsExact, uniqueWords);
                                 unique5WordsExact = GenerateRoots.GenerateWordCountExact(unique5WordsExact, primaryKeywords);
 
 
-                                unique5WordsBroad = unique5WordsBroad.Where(s1 => s1.number > 0).ToList();
-                                unique5WordsBroad.Sort((s1, s2) => s2.number.CompareTo(s1.number));
-                                unique5WordsExact = unique5WordsExact.Where(s1 => s1.number > 0).ToList();
-                                unique5WordsExact.Sort((s1, s2) => s2.number.CompareTo(s1.number));
+                                unique5WordsBroad = unique5WordsBroad.Where(s1 => s1.frequency > 0).ToList();
+                                unique5WordsBroad.Sort((s1, s2) => s2.frequency.CompareTo(s1.frequency));
+                                unique5WordsExact = unique5WordsExact.Where(s1 => s1.frequency > 0).ToList();
+                                unique5WordsExact.Sort((s1, s2) => s2.frequency.CompareTo(s1.frequency));
 
-                                writeExcel.WriteStringAndInt((int)ExcelColumns.Z, (int)ExcelColumns.Y, unique5WordsBroad, 3);
-                                writeExcel.WriteStringAndInt((int)ExcelColumns.AC, (int)ExcelColumns.AB, unique5WordsExact, 3);
+                                writeExcel.WriteRWGCustomData((int)ExcelColumns.AG, (int)ExcelColumns.AH, (int)ExcelColumns.AI, unique5WordsBroad, 3);
+                                writeExcel.WriteRWGCustomData((int)ExcelColumns.AK, (int)ExcelColumns.AL, (int)ExcelColumns.AM, unique5WordsExact, 3);
+
+
                             }
                         }
 
                     }
 
 
-                    uniqueWords = uniqueWords.Where(s1 => s1.number > 0).ToList();
-                    uniqueWords.Sort((s1, s2) => s2.number.CompareTo(s1.number));
-                    unique2WordsBroad = unique2WordsBroad.Where(s1 => s1.number > 0).ToList();
-                    unique2WordsBroad.Sort((s1, s2) => s2.number.CompareTo(s1.number));
-                    unique2WordsExact = unique2WordsExact.Where(s1 => s1.number > 0).ToList();
-                    unique2WordsExact.Sort((s1, s2) => s2.number.CompareTo(s1.number));
+                    uniqueWords = uniqueWords.Where(s1 => s1.frequency > 0).ToList();
+                    uniqueWords.Sort((s1, s2) => s2.frequency.CompareTo(s1.frequency));
+                    unique2WordsBroad = unique2WordsBroad.Where(s1 => s1.frequency > 0).ToList();
+                    unique2WordsBroad.Sort((s1, s2) => s2.frequency.CompareTo(s1.frequency));
+                    unique2WordsExact = unique2WordsExact.Where(s1 => s1.frequency > 0).ToList();
+                    unique2WordsExact.Sort((s1, s2) => s2.frequency.CompareTo(s1.frequency));
 
 
 
                     generateRoots.Text = "Writing roots...";
 
-                    writeExcel.WriteStringAndInt((int)ExcelColumns.E, (int)ExcelColumns.D, uniqueWords, 3);
-                    writeExcel.WriteStringAndInt((int)ExcelColumns.H, (int)ExcelColumns.G, unique2WordsBroad, 3);
-                    writeExcel.WriteStringAndInt((int)ExcelColumns.K, (int)ExcelColumns.J, unique2WordsExact, 3);
+                    writeExcel.WriteRWGCustomData((int)ExcelColumns.E, (int)ExcelColumns.F, (int)ExcelColumns.G, uniqueWords, 3);
+                    writeExcel.WriteRWGCustomData((int)ExcelColumns.I, (int)ExcelColumns.J, (int)ExcelColumns.K, unique2WordsBroad, 3);
+                    writeExcel.WriteRWGCustomData((int)ExcelColumns.M, (int)ExcelColumns.N, (int)ExcelColumns.O, unique2WordsExact, 3);
+
 
                     xlWorkbook.Save();
                     generateRoots.BackColor = Color.White;

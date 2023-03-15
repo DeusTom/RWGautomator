@@ -21,8 +21,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.31.2" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="ExcelFunctionLibrary">
-      <HintPath>..\..\..\ReusableCSharpLibraries\ExcelFunctionLibrary\ExcelFunctionLibrary\obj\Release\net6.0\ExcelFunctionLibrary.dll</HintPath>
+      <HintPath>..\..\ExcelFunctionLibrary\ExcelFunctionLibrary\bin\Release\net6.0\ExcelFunctionLibrary.dll</HintPath>
     </Reference>
   </ItemGroup>
 
