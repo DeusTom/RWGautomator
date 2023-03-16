@@ -17,6 +17,7 @@ namespace KRGautomator
         Excel.Worksheet? xlWorksheet = null;
         private bool IsTraining = false;
         private bool IsAdmin = false;
+        private string sheetName = "Target Relevance Verification";
         public RWGautomator()
         {
             LoginForm form = new();
@@ -54,7 +55,16 @@ namespace KRGautomator
                 {
 
                     generateRoots.BackColor = Color.Red;
-                    xlWorksheet = xlWorkbook.Sheets["Root Word Generator"];
+                    try
+                    {
+                        xlWorksheet = xlWorkbook.Sheets[sheetName];
+                    }
+                    catch
+                    {
+                        MessageBox.Show("Possible problem: changed sheet tab name. Original sheet tab name: " + sheetName);
+                        return;
+                    }
+
 
                     List<DefinedColumn> readableColumns = new();
                     readableColumns.Add(new DefinedColumn() { column = (int)ExcelColumns.B, columnStartsFrom = 3 });
